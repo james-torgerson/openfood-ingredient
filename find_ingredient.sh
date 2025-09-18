@@ -1,20 +1,19 @@
 # find_ingredient.sh
-#!/usr/bin/env bash
+# !/usr/bin/env bash
+set -euo pipefail # for script safety
 
-set -euo pipefail # for safer bash
-
+# input variable set-up
 INGREDIENT=""
 DATA_DIRECTORY=""
 CSV=""
 
+# usage/help
 usage() {
-	echo "Usage: $0 -i \"<ingredient>\" -d /path/to/folder"
-	echo " -i ingredient to search for; case-insensitive"
+	echo "Usage $0 -i \"<ingredient>\" -d /path/to/folder"
+	echo " -i ingredient to search for"
 	echo " -d folder containing products.csv"
 	echo " -h show help"
-}
 
-# Getopts
 while getopts ":i:d:h" opt; do
 	case "$opt" in
 		i) INGREDIENT="$OPTARG" ;;
@@ -24,29 +23,29 @@ while getopts ":i:d:h" opt; do
 	esac
 done
 
-# Validate inputs
-[ -z "${INGREDIENT:-}" ] && usage && exit 1
-[ -z "${DATA_DIR:-}" ] && usage && exit 1
+# validate inputs
+[ -z "$ingredient:-" ] && usage && exit 1
+[ -z "$data_directory:-" ] && usage && exit 1
 
-CSV="$DATA_DIR/products.csv"
+CSV = "$data_directory/products.csv"
 [ -s "$CSV" ] || { echo "ERROR: $CSV not found or empty." >&2; exit 1; }
 
-# Check csvkit tools
+# check csvkit tools
 for cmd in csvcut csvgrep csvformat; do
 	command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: $cmd not found. Please install csvkit." >&2; exit 1; }
 done
 
-# Normalize Windows CRs (if any) into a temp file to avoid parsing issues
+# normalize windows CRs 
 tmp_csv="$(mktemp)"
 tr -d '\r' < "$CSV" > "$tmp_csv"
 
-# Pipeline:
+# actual code pipeline
 tmp_matches="$(mktemp)"
-csvcut -t -c ingredients_text,product_name,code "$tmp_csv" | csvgrep -c ingredients_text -r "(?i)${INGREDIENT}" | csvcut -c product_name,code | csvformat -T | tail -n +2 | tee "$tmp_matches"
+csvcut -t -c ingredients_text,product_name,code "$CSV" | csvgrep -t -c ingredients_text -r "(?i)$INGREDIENT" | csvcut -c product_name,code | csvformat -T | tail -n +2 | tee "$tmp_matches"
 
-N="$(wc -l < \"$tmp_matches\" | tr -d ' ')"
-echo "----"
-echo "Found ${count} product(s) containing: \"${INGREDIENT}\""
+N=$(wc -l < "$tmp_matches")
+echo "-----"
+echo "found ${N} product(s) containing: \"${INGREDIENT}\""
 
 # cleanup
 rm -f "$tmp_csv" "$tmp_matches"
