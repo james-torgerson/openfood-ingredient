@@ -13,6 +13,7 @@ usage() {
 	echo " -i ingredient to search for"
 	echo " -d folder containing products.csv"
 	echo " -h show help"
+}
 
 while getopts ":i:d:h" opt; do
 	case "$opt" in
@@ -24,10 +25,10 @@ while getopts ":i:d:h" opt; do
 done
 
 # validate inputs
-[ -z "$ingredient:-" ] && usage && exit 1
-[ -z "$data_directory:-" ] && usage && exit 1
+[ -z "$INGREDIENT:-" ] && usage && exit 1
+[ -z "$DATA_DIRECTORY:-" ] && usage && exit 1
 
-CSV = "$data_directory/products.csv"
+CSV="$DATA_DIRECTORY/products.csv"
 [ -s "$CSV" ] || { echo "ERROR: $CSV not found or empty." >&2; exit 1; }
 
 # check csvkit tools
@@ -35,17 +36,19 @@ for cmd in csvcut csvgrep csvformat; do
 	command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: $cmd not found. Please install csvkit." >&2; exit 1; }
 done
 
-# normalize windows CRs 
-tmp_csv="$(mktemp)"
-tr -d '\r' < "$CSV" > "$tmp_csv"
 
 # actual code pipeline
 tmp_matches="$(mktemp)"
-csvcut -t -c ingredients_text,product_name,code "$CSV" | csvgrep -t -c ingredients_text -r "(?i)$INGREDIENT" | csvcut -c product_name,code | csvformat -T | tail -n +2 | tee "$tmp_matches"
+csvcut -t -c ingredients_text,product_name,code "$CSV" \
+| csvgrep -c ingredients_text -r "(?i)${INGREDIENT}" \
+| csvcut -c product_name,code \
+| csvformat -T \
+| tail -n +2 \
+| tee "$tmp_matches"
 
 N=$(wc -l < "$tmp_matches")
 echo "-----"
 echo "found ${N} product(s) containing: \"${INGREDIENT}\""
 
 # cleanup
-rm -f "$tmp_csv" "$tmp_matches"
+rm -f "$tmp_matches"
