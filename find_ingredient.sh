@@ -1,5 +1,4 @@
-# find_ingredient.sh
-# !/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail # for script safety
 
 # input variable set-up
